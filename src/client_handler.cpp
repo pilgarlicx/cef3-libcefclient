@@ -43,7 +43,10 @@ ClientHandler::ClientHandler()
       m_BrowserId(0),
       m_bIsClosing(false),
       m_bFocusOnEditableField(false),
-      m_bDevToolsShown(false)
+      m_bDevToolsShown(false),
+      view_handler_(NULL), load_handler_(NULL), process_handler_(NULL),
+      menu_handler_(NULL), dialog_handler_(NULL), print_handler_(NULL),
+      download_handler_(NULL), input_method_editor_handler_(NULL)
 {
     // Read command line settings.
     CefRefPtr<CefCommandLine> command_line =
@@ -57,6 +60,50 @@ ClientHandler::ClientHandler()
 
 ClientHandler::~ClientHandler()
 {
+}
+
+// View callbacks
+/// CefDisplayHandler
+void ClientHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame,
+                                    const CefString& url)
+{
+    if (!view_handler_.get())
+        return;
+    view_handler_->OnAddressChange(browser, frame, url);
+}
+void ClientHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
+                                  const CefString& title)
+{
+    if (!view_handler_.get())
+        return;
+    view_handler_->OnTitleChange(browser, title);
+}
+bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                                     const CefString& message,
+                                     const CefString& source,
+                                     int line)
+{
+    if (!view_handler_.get())
+        return;
+    view_handler_->OnConsoleMessage(browser, message, source, line);
+}
+/// CefRenderHandler
+void ClientHandler::OnCursorChange(CefRefPtr<CefBrowser> browser,
+                                   CefCursorHandler cursor)
+{
+    if (!view_handler_.get())
+        return;
+    view_handler_->OnCursorChange(browser, cursor);
+}
+/// CefRenderProcessHandler [CefApp]
+void ClientHandler::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
+                                         CefRefPtr<CefFrame> frame,
+                                         CefRefPtr<CefDOMNode> node)
+{
+    if (!view_handler_.get())
+        return;
+    view_handler_->OnFocusedNodeChanged(browser, frame, node);
 }
 
 bool ClientHandler::OnProcessMessageReceived(

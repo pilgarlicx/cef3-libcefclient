@@ -14,6 +14,7 @@
 #include <include/cef_client.h>
 #include <include/wrapper/cef_message_router.h>
 
+#include "client_handler_intf.h"
 #include "util.h"
 
 
@@ -30,6 +31,45 @@ class ClientHandler : public CefClient,
                       public CefRenderHandler,
                       public CefRequestHandler
 {
+public:  // callback handlers
+    typedef ClientViewHandler View;
+    typedef ClientLoadHandler Load;
+    typedef ClientProcessHandler Process;
+    typedef ClientMenuHandler Menu;
+    typedef ClientDialogHandler Dialog;
+    typedef ClientPrintHandler Print;
+    typedef ClientDownloadHandler Download;
+    typedef ClientInputMethodEditorHandler InputMethodEditor;
+    
+    void set_view_handler(CefRefPtr<View> handler) { view_handler_ = handler; }
+    void set_load_handler(CefRefPtr<Load> handler) { load_handler_ = handler; }
+    void set_process_handler(CefRefPtr<Process> handler) {
+        process_handler_ = handler;
+    }
+    void set_menu_handler(CefRefPtr<Menu> handler) { menu_handler_ = handler; }
+    void set_dialog_handler(CefRefPtr<Dialog> handler) {
+        dialog_handler_ = handler;
+    }
+    void set_print_handler(CefRefPtr<Print> handler) {
+        print_handler_ = handler;
+    }
+    void set_download_handler(CefRefPtr<Download> handler) {
+        download_handler_ = handler;
+    }
+    void set_input_method_editor_handler(CefRefPtr<InputMethodEditor> handler) {
+        input_method_editor_handler_ = handler;
+    }
+    CefRefPtr<View> view_handler() const { return view_handler_; }
+    CefRefPtr<Load> load_handler() const { return load_handler_; }
+    CefRefPtr<Process> process_handler() const { return process_handler_; }
+    CefRefPtr<Menu> menu_handler() const { return menu_handler_; }
+    CefRefPtr<Dialog> dialog_handler() const { return dialog_handler_; }
+    CefRefPtr<Print> print_handler() const { return print_handler_; }
+    CefRefPtr<Download> download_handler() const { return download_handler_; }
+    CefRefPtr<InputMethodEditor> input_method_editor_handler() const {
+        return input_method_editor_handler_;
+    }
+
 public:
     // Interface implemented to handle off-screen rendering.
     class RenderHandler : public CefRenderHandler {
@@ -316,6 +356,16 @@ protected:
     // Number of currently existing browser windows. The application will exit
     // when the number of windows reaches 0.
     static int m_BrowserCount;
+
+    // Handlers for all callbacks
+    View* view_handler_;
+    Load* load_handler_;
+    Process* process_handler_;
+    Menu* menu_handler_;
+    Dialog* dialog_handler_;
+    Print* print_handler_;
+    Download* download_handler_;
+    InputMethodEditor* input_method_editor_handler_;
 
     // Include the default reference counting implementation.
     IMPLEMENT_REFCOUNTING(ClientHandler);
