@@ -1,0 +1,39 @@
+# Temp, swap, or backup files
+*.bak
+*.swp
+*~
+\#*#
+# Emacs temp files(desktop file, lock files)
+.emacs.*
+
+# VC temp files
+vc100.pdb
+*.sdf
+*.suo
+# Project files for msbuild
+*.sln
+*.vcxproj*
+# Output dir for msbuild/nmake
+debug
+Debug
+Release
+release
+/runtime
+/bin
+/lib
+
+# Makefile tmp
+run-cmake
+
+# CMake build dir
+build
+
+# Ignore .gitmodules, to avoid accidental commit
+.gitmodules
+
+# Sublime Text project and workspace file
+*.sublime-project
+*.sublime-workspace
+
+# Vim session
+Session.vim

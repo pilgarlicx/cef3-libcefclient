@@ -1,0 +1,11 @@
+# Import custom library from depends, update includes and links
+macro(import_custom_library target package)
+    find_package(${package} REQUIRED)
+    if(${package}_FOUND)
+        message("# Package ${package}: ${${package}_INCLUDE_DIRS}")
+        include_directories(${${package}_INCLUDE_DIRS})
+        target_link_libraries(${target} ${${package}_LIBRARIES})
+    else()
+        message(SEND_ERROR "Package ${package} not found!")
+    endif(${package}_FOUND)
+endmacro(import_custom_library)
