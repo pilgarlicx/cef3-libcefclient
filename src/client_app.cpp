@@ -13,6 +13,7 @@
 #include <include/cef_task.h>
 #include <include/cef_v8.h>
 
+#include "client_handler.h"
 #include "util.h"  // NOLINT(build/include)
 
 ClientApp::ClientApp()
@@ -152,6 +153,13 @@ void ClientApp::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
     RenderDelegateSet::iterator it = render_delegates_.begin();
     for (; it != render_delegates_.end(); ++it)
         (*it)->OnFocusedNodeChanged(this, browser, frame, node);
+    // Delegate to the view handler registered in ClientHandler
+    CefRefPtr<ClientHandler> client_handler = GetClientHandler();
+    if (!client_handler.get())
+        return;
+    CefRefPtr<ClientHandler::View> view_handler = client_handler->view_handler();
+    if (view_handler.get())
+        view_handler->OnFocusedNodeChanged(browser, frame, node);
 }
 
 bool ClientApp::OnProcessMessageReceived(

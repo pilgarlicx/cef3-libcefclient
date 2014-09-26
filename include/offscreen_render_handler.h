@@ -10,10 +10,10 @@
 
 #include <include/cef_render_handler.h>
 
-#include "client_handler.h"
+#include "client_handler_impl.h"
 
 
-class OffScreenRenderHandler : public ClientHandler::RenderHandler
+class OffScreenRenderHandler : public ClientHandlerImpl::RenderHandler
 {
 public:
     // Wrapper class for the underlying window of this offscreen browser, used
@@ -41,7 +41,7 @@ public:
     static CefRefPtr<OffScreenRenderHandler> Create(bool transparent=true);
 
     static CefRefPtr<OffScreenRenderHandler> From(
-        CefRefPtr<ClientHandler::RenderHandler> render_handler);
+        CefRefPtr<ClientHandlerImpl::RenderHandler> render_handler);
 
     // ClientHandler::RenderHandler methods
     virtual void OnBeforeClose(CefRefPtr<CefBrowser> browser) OVERRIDE;

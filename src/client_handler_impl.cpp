@@ -2,7 +2,7 @@
 // reserved. Use of this source code is governed by a BSD-style license that
 // can be found in the LICENSE file.
 
-#include "client_handler.h"
+#include "client_handler_impl.h"
 
 #include <stdio.h>
 #include <algorithm>
@@ -36,17 +36,15 @@ enum client_menu_ids {
 
 }  // namespace
 
-int ClientHandler::m_BrowserCount = 0;
+int ClientHandlerImpl::m_BrowserCount = 0;
 
-ClientHandler::ClientHandler()
-    : m_MainHwnd(NULL),
+ClientHandlerImpl::ClientHandlerImpl()
+    : ClientHandler(),
+      m_MainHwnd(NULL),
       m_BrowserId(0),
       m_bIsClosing(false),
       m_bFocusOnEditableField(false),
-      m_bDevToolsShown(false),
-      view_handler_(NULL), load_handler_(NULL), process_handler_(NULL),
-      menu_handler_(NULL), dialog_handler_(NULL), print_handler_(NULL),
-      download_handler_(NULL), input_method_editor_handler_(NULL)
+      m_bDevToolsShown(false)
 {
     // Read command line settings.
     CefRefPtr<CefCommandLine> command_line =
@@ -58,55 +56,58 @@ ClientHandler::ClientHandler()
         m_StartupURL = "http://www.google.com/";
 }
 
-ClientHandler::~ClientHandler()
+ClientHandlerImpl::~ClientHandlerImpl()
 {
 }
 
-// View callbacks
+// View
 /// CefDisplayHandler
-void ClientHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
+void ClientHandlerImpl::OnAddressChange(CefRefPtr<CefBrowser> browser,
                                     CefRefPtr<CefFrame> frame,
                                     const CefString& url)
 {
+    REQUIRE_UI_THREAD();
     if (!view_handler_.get())
         return;
     view_handler_->OnAddressChange(browser, frame, url);
 }
-void ClientHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
+void ClientHandlerImpl::OnTitleChange(CefRefPtr<CefBrowser> browser,
                                   const CefString& title)
 {
+    REQUIRE_UI_THREAD();
     if (!view_handler_.get())
         return;
     view_handler_->OnTitleChange(browser, title);
 }
-bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+bool ClientHandlerImpl::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
                                      const CefString& message,
                                      const CefString& source,
                                      int line)
 {
     if (!view_handler_.get())
-        return;
-    view_handler_->OnConsoleMessage(browser, message, source, line);
+        return false;
+    return view_handler_->OnConsoleMessage(browser, message, source, line);
 }
 /// CefRenderHandler
-void ClientHandler::OnCursorChange(CefRefPtr<CefBrowser> browser,
-                                   CefCursorHandler cursor)
+void ClientHandlerImpl::OnCursorChange(CefRefPtr<CefBrowser> browser,
+                                   CefCursorHandle cursor)
 {
+    REQUIRE_UI_THREAD();
     if (!view_handler_.get())
         return;
     view_handler_->OnCursorChange(browser, cursor);
 }
-/// CefRenderProcessHandler [CefApp]
-void ClientHandler::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
-                                         CefRefPtr<CefFrame> frame,
-                                         CefRefPtr<CefDOMNode> node)
-{
-    if (!view_handler_.get())
-        return;
-    view_handler_->OnFocusedNodeChanged(browser, frame, node);
-}
+// /// CefRenderProcessHandler [CefApp]
+// void ClientHandlerImpl::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
+//                                          CefRefPtr<CefFrame> frame,
+//                                          CefRefPtr<CefDOMNode> node)
+// {
+//     if (!view_handler_.get())
+//         return;
+//     view_handler_->OnFocusedNodeChanged(browser, frame, node);
+// }
 
-bool ClientHandler::OnProcessMessageReceived(
+bool ClientHandlerImpl::OnProcessMessageReceived(
     CefRefPtr<CefBrowser> browser,
     CefProcessId source_process,
     CefRefPtr<CefProcessMessage> message)
@@ -123,21 +124,10 @@ bool ClientHandler::OnProcessMessageReceived(
             return true;
     }
 
-    // Check for messages from the client renderer.
-    std::string message_name = message->GetName();
-    if (message_name == client_renderer::kFocusedNodeChangedMessage) {
-        // A message is sent from ClientRenderDelegate to tell us whether the
-        // currently focused DOM node is editable. Use of |m_bFocusOnEditableField|
-        // is redundant with CefKeyEvent.focus_on_editable_field in OnPreKeyEvent
-        // but is useful for demonstration purposes.
-        m_bFocusOnEditableField = message->GetArgumentList()->GetBool(0);
-        return true;
-    }
-
     return false;
 }
 
-void ClientHandler::OnBeforeContextMenu(
+void ClientHandlerImpl::OnBeforeContextMenu(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
     CefRefPtr<CefContextMenuParams> params,
@@ -155,7 +145,7 @@ void ClientHandler::OnBeforeContextMenu(
     model->Clear();
 }
 
-bool ClientHandler::OnContextMenuCommand(
+bool ClientHandlerImpl::OnContextMenuCommand(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
     CefRefPtr<CefContextMenuParams> params,
@@ -173,17 +163,7 @@ bool ClientHandler::OnContextMenuCommand(
     return true;
 }
 
-bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
-                                     const CefString& message,
-                                     const CefString& source,
-                                     int line)
-{
-    REQUIRE_UI_THREAD();
-
-    return false;
-}
-
-void ClientHandler::OnBeforeDownload(
+void ClientHandlerImpl::OnBeforeDownload(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefDownloadItem> download_item,
     const CefString& suggested_name,
@@ -194,7 +174,7 @@ void ClientHandler::OnBeforeDownload(
     callback->Continue(GetDownloadPath(suggested_name), true);
 }
 
-void ClientHandler::OnDownloadUpdated(
+void ClientHandlerImpl::OnDownloadUpdated(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefDownloadItem> download_item,
     CefRefPtr<CefDownloadItemCallback> callback)
@@ -206,7 +186,7 @@ void ClientHandler::OnDownloadUpdated(
     }
 }
 
-bool ClientHandler::OnDragEnter(CefRefPtr<CefBrowser> browser,
+bool ClientHandlerImpl::OnDragEnter(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefDragData> dragData,
                                 DragOperationsMask mask)
 {
@@ -219,7 +199,7 @@ bool ClientHandler::OnDragEnter(CefRefPtr<CefBrowser> browser,
     return false;
 }
 
-void ClientHandler::OnRequestGeolocationPermission(
+void ClientHandlerImpl::OnRequestGeolocationPermission(
     CefRefPtr<CefBrowser> browser,
     const CefString& requesting_url,
     int request_id,
@@ -229,7 +209,7 @@ void ClientHandler::OnRequestGeolocationPermission(
     callback->Continue(true);
 }
 
-bool ClientHandler::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
+bool ClientHandlerImpl::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
                                   const CefKeyEvent& event,
                                   CefEventHandle os_event,
                                   bool* is_keyboard_shortcut)
@@ -251,15 +231,15 @@ bool ClientHandler::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
     return false;
 }
 
-bool ClientHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
-                                  CefRefPtr<CefFrame> frame,
-                                  const CefString& target_url,
-                                  const CefString& target_frame_name,
-                                  const CefPopupFeatures& popupFeatures,
-                                  CefWindowInfo& windowInfo,
-                                  CefRefPtr<CefClient>& client,
-                                  CefBrowserSettings& settings,
-                                  bool* no_javascript_access)
+bool ClientHandlerImpl::OnBeforePopup(CefRefPtr<CefBrowser> browser,
+                                      CefRefPtr<CefFrame> frame,
+                                      const CefString& target_url,
+                                      const CefString& target_frame_name,
+                                      const CefPopupFeatures& popupFeatures,
+                                      CefWindowInfo& windowInfo,
+                                      CefRefPtr<CefClient>& client,
+                                      CefBrowserSettings& settings,
+                                      bool* no_javascript_access)
 {
     if (browser->GetHost()->IsWindowRenderingDisabled()) {
         // Cancel popups in off-screen rendering mode.
@@ -268,7 +248,7 @@ bool ClientHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
     return false;
 }
 
-void ClientHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
+void ClientHandlerImpl::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 {
     REQUIRE_UI_THREAD();
 
@@ -300,7 +280,7 @@ void ClientHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
     m_BrowserCount++;
 }
 
-bool ClientHandler::DoClose(CefRefPtr<CefBrowser> browser)
+bool ClientHandlerImpl::DoClose(CefRefPtr<CefBrowser> browser)
 {
     REQUIRE_UI_THREAD();
 
@@ -320,7 +300,7 @@ bool ClientHandler::DoClose(CefRefPtr<CefBrowser> browser)
     return false;
 }
 
-void ClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
+void ClientHandlerImpl::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 {
     REQUIRE_UI_THREAD();
 
@@ -361,10 +341,10 @@ void ClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
     }
 }
 
-void ClientHandler::OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
-                                         bool isLoading,
-                                         bool canGoBack,
-                                         bool canGoForward)
+void ClientHandlerImpl::OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
+                                             bool isLoading,
+                                             bool canGoBack,
+                                             bool canGoForward)
 {
     REQUIRE_UI_THREAD();
 
@@ -372,11 +352,11 @@ void ClientHandler::OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
     SetNavState(canGoBack, canGoForward);
 }
 
-void ClientHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
-                                CefRefPtr<CefFrame> frame,
-                                ErrorCode errorCode,
-                                const CefString& errorText,
-                                const CefString& failedUrl)
+void ClientHandlerImpl::OnLoadError(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame,
+                                    ErrorCode errorCode,
+                                    const CefString& errorText,
+                                    const CefString& failedUrl)
 {
     REQUIRE_UI_THREAD();
 
@@ -401,16 +381,16 @@ void ClientHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
     frame->LoadString(ss.str(), failedUrl);
 }
 
-bool ClientHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
-                                   CefRefPtr<CefFrame> frame,
-                                   CefRefPtr<CefRequest> request,
-                                   bool is_redirect)
+bool ClientHandlerImpl::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+                                       CefRefPtr<CefFrame> frame,
+                                       CefRefPtr<CefRequest> request,
+                                       bool is_redirect)
 {
     message_router_->OnBeforeBrowse(browser, frame);
     return false;
 }
 
-CefRefPtr<CefResourceHandler> ClientHandler::GetResourceHandler(
+CefRefPtr<CefResourceHandler> ClientHandlerImpl::GetResourceHandler(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
     CefRefPtr<CefRequest> request)
@@ -421,10 +401,10 @@ CefRefPtr<CefResourceHandler> ClientHandler::GetResourceHandler(
     return NULL;
 }
 
-bool ClientHandler::OnQuotaRequest(CefRefPtr<CefBrowser> browser,
-                                   const CefString& origin_url,
-                                   int64 new_size,
-                                   CefRefPtr<CefQuotaCallback> callback)
+bool ClientHandlerImpl::OnQuotaRequest(CefRefPtr<CefBrowser> browser,
+                                       const CefString& origin_url,
+                                       int64 new_size,
+                                       CefRefPtr<CefQuotaCallback> callback)
 {
     static const int64 max_size = 1024 * 1024 * 20;  // 20mb.
 
@@ -433,9 +413,9 @@ bool ClientHandler::OnQuotaRequest(CefRefPtr<CefBrowser> browser,
     return true;
 }
 
-void ClientHandler::OnProtocolExecution(CefRefPtr<CefBrowser> browser,
-                                        const CefString& url,
-                                        bool& allow_os_execution)
+void ClientHandlerImpl::OnProtocolExecution(CefRefPtr<CefBrowser> browser,
+                                            const CefString& url,
+                                            bool& allow_os_execution)
 {
     std::string urlStr = url;
 
@@ -444,8 +424,8 @@ void ClientHandler::OnProtocolExecution(CefRefPtr<CefBrowser> browser,
         allow_os_execution = true;
 }
 
-void ClientHandler::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
-                                              TerminationStatus status)
+void ClientHandlerImpl::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
+                                                  TerminationStatus status)
 {
     message_router_->OnRenderProcessTerminated(browser);
 
@@ -462,15 +442,15 @@ void ClientHandler::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
 }
 
 /// *** BEGIN IMPORTANT *** ///
-bool ClientHandler::GetRootScreenRect(CefRefPtr<CefBrowser> browser,
-                                      CefRect& rect)
+bool ClientHandlerImpl::GetRootScreenRect(CefRefPtr<CefBrowser> browser,
+                                          CefRect& rect)
 {
     if (!m_OSRHandler.get())
         return false;
     return m_OSRHandler->GetRootScreenRect(browser, rect);
 }
 
-bool ClientHandler::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
+bool ClientHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
 {
     if (!m_OSRHandler.get())
         return false;
@@ -478,7 +458,7 @@ bool ClientHandler::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
 }
 
 /// *** BEGIN IMPORTANT *** ///
-bool ClientHandler::GetScreenPoint(CefRefPtr<CefBrowser> browser,
+bool ClientHandlerImpl::GetScreenPoint(CefRefPtr<CefBrowser> browser,
                                    int viewX,
                                    int viewY,
                                    int& screenX,
@@ -489,7 +469,7 @@ bool ClientHandler::GetScreenPoint(CefRefPtr<CefBrowser> browser,
     return m_OSRHandler->GetScreenPoint(browser, viewX, viewY, screenX, screenY);
 }
 
-bool ClientHandler::GetScreenInfo(CefRefPtr<CefBrowser> browser,
+bool ClientHandlerImpl::GetScreenInfo(CefRefPtr<CefBrowser> browser,
                                   CefScreenInfo& screen_info)
 {
     if (!m_OSRHandler.get())
@@ -497,7 +477,7 @@ bool ClientHandler::GetScreenInfo(CefRefPtr<CefBrowser> browser,
     return m_OSRHandler->GetScreenInfo(browser, screen_info);
 }
 
-void ClientHandler::OnPopupShow(CefRefPtr<CefBrowser> browser,
+void ClientHandlerImpl::OnPopupShow(CefRefPtr<CefBrowser> browser,
                                 bool show)
 {
     if (!m_OSRHandler.get())
@@ -505,7 +485,7 @@ void ClientHandler::OnPopupShow(CefRefPtr<CefBrowser> browser,
     return m_OSRHandler->OnPopupShow(browser, show);
 }
 
-void ClientHandler::OnPopupSize(CefRefPtr<CefBrowser> browser,
+void ClientHandlerImpl::OnPopupSize(CefRefPtr<CefBrowser> browser,
                                 const CefRect& rect)
 {
     if (!m_OSRHandler.get())
@@ -513,7 +493,7 @@ void ClientHandler::OnPopupSize(CefRefPtr<CefBrowser> browser,
     return m_OSRHandler->OnPopupSize(browser, rect);
 }
 
-void ClientHandler::OnPaint(CefRefPtr<CefBrowser> browser,
+void ClientHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser,
                             PaintElementType type,
                             const RectList& dirtyRects,
                             const void* buffer,
@@ -525,27 +505,27 @@ void ClientHandler::OnPaint(CefRefPtr<CefBrowser> browser,
     m_OSRHandler->OnPaint(browser, type, dirtyRects, buffer, width, height);
 }
 
-void ClientHandler::OnCursorChange(CefRefPtr<CefBrowser> browser,
-                                   CefCursorHandle cursor)
-{
-    if (!m_OSRHandler.get())
-        return;
-    m_OSRHandler->OnCursorChange(browser, cursor);
-}
+// void ClientHandlerImpl::OnCursorChange(CefRefPtr<CefBrowser> browser,
+//                                    CefCursorHandle cursor)
+// {
+//     if (!m_OSRHandler.get())
+//         return;
+//     m_OSRHandler->OnCursorChange(browser, cursor);
+// }
 /// *** END IMPORTANT *** ///
 
-void ClientHandler::SetMainHwnd(CefWindowHandle hwnd)
+void ClientHandlerImpl::SetMainHwnd(CefWindowHandle hwnd)
 {
     AutoLock lock_scope(this);
     m_MainHwnd = hwnd;
 }
 
-void ClientHandler::CloseAllBrowsers(bool force_close)
+void ClientHandlerImpl::CloseAllBrowsers(bool force_close)
 {
     if (!CefCurrentlyOn(TID_UI)) {
         // Execute on the UI thread.
         CefPostTask(TID_UI,
-                    NewCefRunnableMethod(this, &ClientHandler::CloseAllBrowsers,
+                    NewCefRunnableMethod(this, &ClientHandlerImpl::CloseAllBrowsers,
                                          force_close));
         return;
     }
@@ -563,19 +543,19 @@ void ClientHandler::CloseAllBrowsers(bool force_close)
     }
 }
 
-void ClientHandler::SetLastDownloadFile(const std::string& fileName)
+void ClientHandlerImpl::SetLastDownloadFile(const std::string& fileName)
 {
     AutoLock lock_scope(this);
     m_LastDownloadFile = fileName;
 }
 
-std::string ClientHandler::GetLastDownloadFile()
+std::string ClientHandlerImpl::GetLastDownloadFile()
 {
     AutoLock lock_scope(this);
     return m_LastDownloadFile;
 }
 
-void ClientHandler::ShowDevTools(CefRefPtr<CefBrowser> browser)
+void ClientHandlerImpl::ShowDevTools(CefRefPtr<CefBrowser> browser)
 {
     CefWindowInfo windowInfo;
     CefBrowserSettings settings;
@@ -587,29 +567,29 @@ void ClientHandler::ShowDevTools(CefRefPtr<CefBrowser> browser)
     browser->GetHost()->ShowDevTools(windowInfo, this, settings);
 }
 
-void ClientHandler::CloseDevTools(CefRefPtr<CefBrowser> browser)
+void ClientHandlerImpl::CloseDevTools(CefRefPtr<CefBrowser> browser)
 {
     browser->GetHost()->CloseDevTools();
 }
 
-void ClientHandler::BeginTracing()
+void ClientHandlerImpl::BeginTracing()
 {
     if (CefCurrentlyOn(TID_UI)) {
         CefBeginTracing(CefString());
     } else {
         CefPostTask(TID_UI,
-                    NewCefRunnableMethod(this, &ClientHandler::BeginTracing));
+                    NewCefRunnableMethod(this, &ClientHandlerImpl::BeginTracing));
     }
 }
 
-void ClientHandler::EndTracing()
+void ClientHandlerImpl::EndTracing()
 {
     if (CefCurrentlyOn(TID_UI)) {
-        class Client : public CefEndTracingCallback,
-                       public CefRunFileDialogCallback
+        class Callback : public CefEndTracingCallback,
+                         public CefRunFileDialogCallback
         {
         public:
-            explicit Client(CefRefPtr<ClientHandler> handler)
+            explicit Callback(CefRefPtr<ClientHandlerImpl> handler)
                 : handler_(handler) {
                     RunDialog();
             }
@@ -644,19 +624,19 @@ void ClientHandler::EndTracing()
             }
 
         private:
-            CefRefPtr<ClientHandler> handler_;
+            CefRefPtr<ClientHandlerImpl> handler_;
 
             IMPLEMENT_REFCOUNTING(Callback);
         };
 
-        new Client(this);
+        new Callback(this);
     } else {
         CefPostTask(TID_UI,
-                    NewCefRunnableMethod(this, &ClientHandler::BeginTracing));
+                    NewCefRunnableMethod(this, &ClientHandlerImpl::BeginTracing));
     }
 }
 
-bool ClientHandler::Save(const std::string& path, const std::string& data)
+bool ClientHandlerImpl::Save(const std::string& path, const std::string& data)
 {
     FILE* f = fopen(path.c_str(), "w");
     if (!f)
@@ -673,7 +653,7 @@ bool ClientHandler::Save(const std::string& path, const std::string& data)
 }
 
 // static
-void ClientHandler::CreateMessageHandlers(MessageHandlerSet& handlers)
+void ClientHandlerImpl::CreateMessageHandlers(MessageHandlerSet& handlers)
 {
     /// @todo
 }

@@ -20,7 +20,7 @@ CefRefPtr<OffScreenRenderHandler> OffScreenRenderHandler::Create(
 
 // static
 CefRefPtr<OffScreenRenderHandler> OffScreenRenderHandler::From(
-    CefRefPtr<ClientHandler::RenderHandler> renderHandler)
+    CefRefPtr<ClientHandlerImpl::RenderHandler> renderHandler)
 {
     return static_cast<OffScreenRenderHandler*>(renderHandler.get());
 }

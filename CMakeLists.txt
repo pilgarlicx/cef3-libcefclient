@@ -28,6 +28,7 @@ set(${target}_headers
     include/offscreen_render_handler.h
     include/client_app.h
     include/client_handler.h
+    include/client_handler_impl.h
     include/client_renderer.h
     include/client_switches.h
     include/client_resource.h
@@ -39,7 +40,7 @@ set(${target}_sources
     src/offscreen_render_handler.cpp
     src/client_app.cpp
     src/client_app_delegates.cpp
-    src/client_handler.cpp
+    src/client_handler_impl.cpp
     src/client_handler_win.cpp
     src/client_renderer.cpp
     src/client_switches.cpp
