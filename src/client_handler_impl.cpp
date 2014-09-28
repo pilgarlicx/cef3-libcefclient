@@ -67,45 +67,33 @@ void ClientHandlerImpl::OnAddressChange(CefRefPtr<CefBrowser> browser,
                                     const CefString& url)
 {
     REQUIRE_UI_THREAD();
-    if (!view_handler_.get())
-        return;
-    view_handler_->OnAddressChange(browser, frame, url);
+    if (view_handler_.get())
+        view_handler_->OnAddressChange(browser, frame, url);
 }
 void ClientHandlerImpl::OnTitleChange(CefRefPtr<CefBrowser> browser,
                                   const CefString& title)
 {
     REQUIRE_UI_THREAD();
-    if (!view_handler_.get())
-        return;
-    view_handler_->OnTitleChange(browser, title);
+    if (view_handler_.get())
+        view_handler_->OnTitleChange(browser, title);
 }
 bool ClientHandlerImpl::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
                                      const CefString& message,
                                      const CefString& source,
                                      int line)
 {
-    if (!view_handler_.get())
-        return false;
-    return view_handler_->OnConsoleMessage(browser, message, source, line);
+    if (view_handler_.get())
+        return view_handler_->OnConsoleMessage(browser, message, source, line);
+    return false;
 }
 /// CefRenderHandler
 void ClientHandlerImpl::OnCursorChange(CefRefPtr<CefBrowser> browser,
                                    CefCursorHandle cursor)
 {
     REQUIRE_UI_THREAD();
-    if (!view_handler_.get())
-        return;
-    view_handler_->OnCursorChange(browser, cursor);
+    if (view_handler_.get())
+        view_handler_->OnCursorChange(browser, cursor);
 }
-// /// CefRenderProcessHandler [CefApp]
-// void ClientHandlerImpl::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
-//                                          CefRefPtr<CefFrame> frame,
-//                                          CefRefPtr<CefDOMNode> node)
-// {
-//     if (!view_handler_.get())
-//         return;
-//     view_handler_->OnFocusedNodeChanged(browser, frame, node);
-// }
 
 bool ClientHandlerImpl::OnProcessMessageReceived(
     CefRefPtr<CefBrowser> browser,
@@ -143,6 +131,10 @@ void ClientHandlerImpl::OnBeforeContextMenu(
     //     model->AddItem(CLIENT_ID_CLOSE_DEVTOOLS, "Close DevTools");
     // }
     model->Clear();
+
+    /// CEF3-Awesomium
+    if (menu_handler_.get())
+        menu_handler_->OnBeforeContextMenu(browser, frame, params, model);
 }
 
 bool ClientHandlerImpl::OnContextMenuCommand(
@@ -170,8 +162,11 @@ void ClientHandlerImpl::OnBeforeDownload(
     CefRefPtr<CefBeforeDownloadCallback> callback)
 {
     REQUIRE_UI_THREAD();
-    // Continue the download and show the "Save As" dialog.
-    callback->Continue(GetDownloadPath(suggested_name), true);
+    // // Continue the download and show the "Save As" dialog.
+    // callback->Continue(GetDownloadPath(suggested_name), true);
+    if (download_handler_.get())
+        download_handler_->OnBeforeDownload(browser, download_item,
+                suggested_name, callback);
 }
 
 void ClientHandlerImpl::OnDownloadUpdated(
@@ -180,10 +175,12 @@ void ClientHandlerImpl::OnDownloadUpdated(
     CefRefPtr<CefDownloadItemCallback> callback)
 {
     REQUIRE_UI_THREAD();
-    if (download_item->IsComplete()) {
-        SetLastDownloadFile(download_item->GetFullPath());
-        SendNotification(NOTIFY_DOWNLOAD_COMPLETE);
-    }
+    // if (download_item->IsComplete()) {
+    //     SetLastDownloadFile(download_item->GetFullPath());
+    //     SendNotification(NOTIFY_DOWNLOAD_COMPLETE);
+    // }
+    if (download_handler_.get())
+        download_handler_->OnDownloadUpdated(browser, download_item, callback);
 }
 
 bool ClientHandlerImpl::OnDragEnter(CefRefPtr<CefBrowser> browser,
@@ -428,6 +425,10 @@ void ClientHandlerImpl::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
                                                   TerminationStatus status)
 {
     message_router_->OnRenderProcessTerminated(browser);
+    
+    /// CEF3-Awesomium
+    if (process_handler_.get())
+        process_handler_->OnRenderProcessTerminated(browser, status);
 
     // Load the startup URL if that's not the website that we terminated on.
     CefRefPtr<CefFrame> frame = browser->GetMainFrame();
@@ -513,6 +514,45 @@ void ClientHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser,
 //     m_OSRHandler->OnCursorChange(browser, cursor);
 // }
 /// *** END IMPORTANT *** ///
+
+bool ClientHandlerImpl::OnFileDialog(CefRefPtr<CefBrowser> browser,
+                                     CefDialogHandler::FileDialogMode mode,
+                                     const CefString& title,
+                                     const CefString& default_file_name,
+                                     const std::vector<CefString>& accept_types,
+                                     CefRefPtr<CefFileDialogCallback> callback)
+{
+    REQUIRE_UI_THREAD();
+    if (dialog_handler_.get())
+        return dialog_handler_->OnFileDialog(browser, mode, title,
+                default_file_name, accept_types, callback);
+    return false;
+}
+bool ClientHandlerImpl::GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+                                           CefRefPtr<CefFrame> frame,
+                                           bool isProxy,
+                                           const CefString& host,
+                                           int port,
+                                           const CefString& realm,
+                                           const CefString& scheme,
+                                           CefRefPtr<CefAuthCallback> callback)
+{
+    REQUIRE_UI_THREAD();
+    if (dialog_handler_.get())
+        return dialog_handler_->GetAuthCredentials(browser, frame, isProxy,
+                host, port, realm, scheme, callback);
+    return false;
+}
+bool ClientHandlerImpl::OnCertificateError(cef_errorcode_t cert_error,
+                                           const CefString& request_url,
+                                           CefRefPtr<CefAllowCertificateErrorCallback> callback)
+{
+    REQUIRE_UI_THREAD();
+    if (dialog_handler_.get())
+        return dialog_handler_->OnCertificateError(cert_error, request_url,
+                callback);
+    return false;
+}
 
 void ClientHandlerImpl::SetMainHwnd(CefWindowHandle hwnd)
 {

@@ -27,7 +27,8 @@ class ClientHandlerImpl : public ClientHandler,
                           public CefLifeSpanHandler,
                           public CefLoadHandler,
                           public CefRenderHandler,
-                          public CefRequestHandler
+                          public CefRequestHandler,
+                          public CefDialogHandler
 {
 public:
     // Interface implemented to handle off-screen rendering.
@@ -84,6 +85,9 @@ public:
         return this;
     }
     virtual CefRefPtr<CefRequestHandler> GetRequestHandler() OVERRIDE {
+        return this;
+    }
+    virtual CefRefPtr<CefDialogHandler> GetDialogHandler() OVERRIDE {
         return this;
     }
     virtual bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
@@ -168,6 +172,18 @@ public:
                              const CefString& failedUrl) OVERRIDE;
 
     // CefRequestHandler methods
+    virtual bool GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame,
+                                    bool isProxy,
+                                    const CefString& host,
+                                    int port,
+                                    const CefString& realm,
+                                    const CefString& scheme,
+                                    CefRefPtr<CefAuthCallback> callback) OVERRIDE;
+    virtual bool OnCertificateError(cef_errorcode_t cert_error,
+                                    const CefString& request_url,
+                                    CefRefPtr<CefAllowCertificateErrorCallback> callback)
+        OVERRIDE;
     virtual bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,
@@ -209,6 +225,14 @@ public:
                          int height) OVERRIDE;
     virtual void OnCursorChange(CefRefPtr<CefBrowser> browser,
                                 CefCursorHandle cursor) OVERRIDE;
+
+    // CefDialogHandler
+    virtual bool OnFileDialog(CefRefPtr<CefBrowser> browser,
+                              CefDialogHandler::FileDialogMode mode,
+                              const CefString& title,
+                              const CefString& default_file_name,
+                              const std::vector<CefString>& accept_types,
+                              CefRefPtr<CefFileDialogCallback> callback) OVERRIDE;
 
     void SetMainHwnd(CefWindowHandle hwnd);
     CefWindowHandle GetMainHwnd() { return m_MainHwnd; }

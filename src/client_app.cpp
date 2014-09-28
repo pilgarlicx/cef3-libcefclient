@@ -88,15 +88,15 @@ void ClientApp::OnBrowserDestroyed(CefRefPtr<CefBrowser> browser)
         (*it)->OnBrowserDestroyed(this, browser);
 }
 
-CefRefPtr<CefLoadHandler> ClientApp::GetLoadHandler()
-{
-    CefRefPtr<CefLoadHandler> load_handler;
-    RenderDelegateSet::iterator it = render_delegates_.begin();
-    for (; it != render_delegates_.end() && !load_handler.get(); ++it)
-        load_handler = (*it)->GetLoadHandler(this);
-
-    return load_handler;
-}
+// CefRefPtr<CefLoadHandler> ClientApp::GetLoadHandler()
+// {
+//     CefRefPtr<CefLoadHandler> load_handler;
+//     RenderDelegateSet::iterator it = render_delegates_.begin();
+//     for (; it != render_delegates_.end() && !load_handler.get(); ++it)
+//         load_handler = (*it)->GetLoadHandler(this);
+// 
+//     return load_handler;
+// }
 
 bool ClientApp::OnBeforeNavigation(CefRefPtr<CefBrowser> browser,
                                    CefRefPtr<CefFrame> frame,
@@ -122,6 +122,14 @@ void ClientApp::OnContextCreated(CefRefPtr<CefBrowser> browser,
     RenderDelegateSet::iterator it = render_delegates_.begin();
     for (; it != render_delegates_.end(); ++it)
         (*it)->OnContextCreated(this, browser, frame, context);
+    //
+    CefRefPtr<ClientHandler> client_handler = GetClientHandler();
+    if (client_handler.get()) {
+        CefRefPtr<ClientHandler::Load> load_handler = client_handler->load_handler();
+        if (load_handler.get())
+            client_handler->load_handler()->OnContextCreated(browser, frame,
+                    context);
+    }
 }
 
 void ClientApp::OnContextReleased(CefRefPtr<CefBrowser> browser,
@@ -155,11 +163,11 @@ void ClientApp::OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser,
         (*it)->OnFocusedNodeChanged(this, browser, frame, node);
     // Delegate to the view handler registered in ClientHandler
     CefRefPtr<ClientHandler> client_handler = GetClientHandler();
-    if (!client_handler.get())
-        return;
-    CefRefPtr<ClientHandler::View> view_handler = client_handler->view_handler();
-    if (view_handler.get())
-        view_handler->OnFocusedNodeChanged(browser, frame, node);
+    if (client_handler.get()) {
+        CefRefPtr<ClientHandler::View> view_handler = client_handler->view_handler();
+        if (view_handler.get())
+            view_handler->OnFocusedNodeChanged(browser, frame, node);
+    }
 }
 
 bool ClientApp::OnProcessMessageReceived(
@@ -178,4 +186,40 @@ bool ClientApp::OnProcessMessageReceived(
     }
 
     return handled;
+}
+
+void ClientApp::OnLoadStart(CefRefPtr<CefBrowser> browser,
+                            CefRefPtr<CefFrame> frame)
+{
+    CefRefPtr<ClientHandler> client_handler = GetClientHandler();
+    if (client_handler.get()) {
+        CefRefPtr<ClientHandler::Load> load_handler = client_handler->load_handler();
+        if (load_handler.get())
+            load_handler->OnLoadStart(browser, frame);
+    }
+}
+void ClientApp::OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                          CefRefPtr<CefFrame> frame,
+                          int httpStatusCode)
+{
+    CefRefPtr<ClientHandler> client_handler = GetClientHandler();
+    if (client_handler.get()) {
+        CefRefPtr<ClientHandler::Load> load_handler = client_handler->load_handler();
+        if (load_handler.get())
+            load_handler->OnLoadEnd(browser, frame, httpStatusCode);
+    }
+}
+void ClientApp::OnLoadError(CefRefPtr<CefBrowser> browser,
+                             CefRefPtr<CefFrame> frame,
+                             ErrorCode errorCode,
+                             const CefString& errorText,
+                             const CefString& failedUrl)
+{
+    CefRefPtr<ClientHandler> client_handler = GetClientHandler();
+    if (client_handler.get()) {
+        CefRefPtr<ClientHandler::Load> load_handler = client_handler->load_handler();
+        if (load_handler.get())
+            load_handler->OnLoadError(browser, frame, errorCode, errorText,
+                    failedUrl);
+    }
 }

@@ -166,21 +166,21 @@ public:
 class ClientDialogHandler : public CefBase {
 public:
     /// CefDialogHandler
-    virtual void OnFileDialog(CefRefPtr<CefBrowser> browser,
+    virtual bool OnFileDialog(CefRefPtr<CefBrowser> browser,
                               CefDialogHandler::FileDialogMode mode,
                               const CefString& title,
                               const CefString& default_file_name,
                               const std::vector<CefString>& accept_types,
                               CefRefPtr<CefFileDialogCallback> callback) = 0;
     /// CefRequestHandler
-    virtual bool GetAuthCrendentials(CefRefPtr<CefBrowser> browser,
-                                     CefRefPtr<CefFrame> frame,
-                                     bool isProxy,
-                                     const CefString& host,
-                                     int port,
-                                     const CefString& realm,
-                                     const CefString& scheme,
-                                     CefRefPtr<CefAuthCallback> callback) = 0;
+    virtual bool GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame,
+                                    bool isProxy,
+                                    const CefString& host,
+                                    int port,
+                                    const CefString& realm,
+                                    const CefString& scheme,
+                                    CefRefPtr<CefAuthCallback> callback) = 0;
     virtual bool OnCertificateError(cef_errorcode_t cert_error,
                                     const CefString& request_url,
                                     CefRefPtr<CefAllowCertificateErrorCallback> callback) = 0;
