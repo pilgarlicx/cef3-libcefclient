@@ -165,11 +165,16 @@ public:
                                       bool isLoading,
                                       bool canGoBack,
                                       bool canGoForward) OVERRIDE;
+    virtual void OnLoadStart(CefRefPtr<CefBrowser> browser,
+                             CefRefPtr<CefFrame> frame) OVERRIDE;
     virtual void OnLoadError(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame,
                              ErrorCode errorCode,
                              const CefString& errorText,
                              const CefString& failedUrl) OVERRIDE;
+    virtual void OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                           CefRefPtr<CefFrame> frame,
+                           int httpStatusCode) OVERRIDE;
 
     // CefRequestHandler methods
     virtual bool GetAuthCredentials(CefRefPtr<CefBrowser> browser,
@@ -234,6 +239,25 @@ public:
                               const std::vector<CefString>& accept_types,
                               CefRefPtr<CefFileDialogCallback> callback) OVERRIDE;
 
+    /// Interfaces for outter wrapper
+    bool IsLoading() const { return m_bIsLoading; }
+    bool CanGoBack() const { return m_bCanGoBack; }
+    bool CanGoForward() const { return m_bCanGoForward; }
+    bool IsCrashed() const { return m_bIsCrashed; }
+    void GoBack();
+    void GoForward();
+    void GoToHistoryOffset(int offset);
+    void Stop();
+    void Reload(bool ignore_cache);
+    void Resize(int width, int height);
+    void PauseRendering();
+    void ResumeRendering();
+    void Focus();
+    void Unfocus();
+    void SetZoomLevel(double zoom_level);
+    double GetZoomLevel();
+    CefString title() const { return m_Title; }
+
     void SetMainHwnd(CefWindowHandle hwnd);
     CefWindowHandle GetMainHwnd() { return m_MainHwnd; }
     void SetOSRHandler(CefRefPtr<RenderHandler> handler) {
@@ -250,7 +274,7 @@ public:
     // Returns true if the main browser window is currently closing. Used in
     // combination with DoClose() and the OS close notification to properly handle
     // 'onbeforeunload' JavaScript events during window close.
-    bool IsClosing() { return m_bIsClosing; }
+    bool IsClosing() const { return m_bIsClosing; }
 
     void SetLastDownloadFile(const std::string& fileName);
     std::string GetLastDownloadFile();
@@ -281,8 +305,11 @@ public:
     }
 
 protected:
-    void SetLoading(bool isLoading);
-    void SetNavState(bool canGoBack, bool canGoForward);
+    void SetLoading(bool isLoading) { m_bIsLoading = isLoading; }
+    void SetNavState(bool canGoBack, bool canGoForward) {
+        m_bCanGoBack = canGoBack;
+        m_bCanGoForward = canGoForward;
+    }
 
     // Create all CefMessageRouterBrowserSide::Handler objects. They will be
     // deleted when the ClientHandler is destroyed.
@@ -310,6 +337,17 @@ protected:
 
     // True if the main browser window is currently closing.
     bool m_bIsClosing;
+
+    // Loading state
+    bool m_bIsLoading;
+    bool m_bCanGoBack;
+    bool m_bCanGoForward;
+
+    bool m_bIsCrashed;
+    CefString m_Title;
+
+    std::vector<CefString> m_HistLinks;
+    int m_HistLinksPos;
 
     CefRefPtr<RenderHandler> m_OSRHandler;
 

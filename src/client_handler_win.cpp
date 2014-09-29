@@ -13,31 +13,6 @@
 
 #include "client_resource.h"
 
-// void ClientHandlerImpl::OnAddressChange(CefRefPtr<CefBrowser> browser,
-//                                     CefRefPtr<CefFrame> frame,
-//                                     const CefString& url)
-// {
-//     REQUIRE_UI_THREAD();
-//
-//     if (m_BrowserId == browser->GetIdentifier() && frame->IsMain()) {
-//         /// @todo
-//     }
-// }
-//
-// void ClientHandlerImpl::OnTitleChange(CefRefPtr<CefBrowser> browser,
-//                                   const CefString& title)
-// {
-//     REQUIRE_UI_THREAD();
-//
-//     // Set the frame window title bar
-//     CefWindowHandle hwnd = browser->GetHost()->GetWindowHandle();
-//     if (m_BrowserId == browser->GetIdentifier())   {
-//         // The frame window will be the parent of the browser window
-//         hwnd = GetParent(hwnd);
-//     }
-//     //SetWindowText(hwnd, std::wstring(title).c_str());
-// }
-
 void ClientHandlerImpl::SendNotification(NotificationType type)
 {
     UINT id;
@@ -55,16 +30,6 @@ void ClientHandlerImpl::SendNotification(NotificationType type)
         return;
     }
     PostMessage(m_MainHwnd, WM_COMMAND, id, 0);
-}
-
-void ClientHandlerImpl::SetLoading(bool isLoading)
-{
-    /// @todo
-}
-
-void ClientHandlerImpl::SetNavState(bool canGoBack, bool canGoForward)
-{
-    /// @todo
 }
 
 std::string ClientHandlerImpl::GetDownloadPath(const std::string& file_name)

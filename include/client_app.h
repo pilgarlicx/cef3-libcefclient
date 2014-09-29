@@ -16,8 +16,7 @@
 
 class ClientApp : public CefApp,
                   public CefBrowserProcessHandler,
-                  public CefRenderProcessHandler,
-                  public CefLoadHandler
+                  public CefRenderProcessHandler
 {
 public:
     // Interface for browser delegates. All BrowserDelegates must be returned via
@@ -135,15 +134,12 @@ private:
         CefRefPtr<CefListValue> extra_info) OVERRIDE;
 
     // CefRenderProcessHandler methods.
-    virtual CefRefPtr<CefLoadHandler> GetLoadHandler() OVERRIDE {
-        return this;
-    }
     virtual void OnRenderThreadCreated(CefRefPtr<CefListValue> extra_info)
         OVERRIDE;
     virtual void OnWebKitInitialized() OVERRIDE;
     virtual void OnBrowserCreated(CefRefPtr<CefBrowser> browser) OVERRIDE;
     virtual void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) OVERRIDE;
-    // virtual CefRefPtr<CefLoadHandler> GetLoadHandler() OVERRIDE;
+    virtual CefRefPtr<CefLoadHandler> GetLoadHandler() OVERRIDE;
     virtual bool OnBeforeNavigation(CefRefPtr<CefBrowser> browser,
                                     CefRefPtr<CefFrame> frame,
                                     CefRefPtr<CefRequest> request,
@@ -168,18 +164,6 @@ private:
         CefRefPtr<CefBrowser> browser,
         CefProcessId source_process,
         CefRefPtr<CefProcessMessage> message) OVERRIDE;
-
-    // CefLoadHandler
-    virtual void OnLoadStart(CefRefPtr<CefBrowser> browser,
-                             CefRefPtr<CefFrame> frame) OVERRIDE;
-    virtual void OnLoadEnd(CefRefPtr<CefBrowser> browser,
-                           CefRefPtr<CefFrame> frame,
-                           int httpStatusCode) OVERRIDE;
-    virtual void OnLoadError(CefRefPtr<CefBrowser> browser,
-                             CefRefPtr<CefFrame> frame,
-                             ErrorCode errorCode,
-                             const CefString& errorText,
-                             const CefString& failedUrl) OVERRIDE;
 
     // Set of supported BrowserDelegates. Only used in the browser process.
     BrowserDelegateSet browser_delegates_;

@@ -43,6 +43,10 @@ ClientHandlerImpl::ClientHandlerImpl()
       m_MainHwnd(NULL),
       m_BrowserId(0),
       m_bIsClosing(false),
+      m_bCanGoBack(false),
+      m_bCanGoForward(false),
+      m_bIsCrashed(false),
+      m_HistLinksPos(-1),
       m_bFocusOnEditableField(false),
       m_bDevToolsShown(false)
 {
@@ -76,6 +80,8 @@ void ClientHandlerImpl::OnTitleChange(CefRefPtr<CefBrowser> browser,
     REQUIRE_UI_THREAD();
     if (view_handler_.get())
         view_handler_->OnTitleChange(browser, title);
+
+    m_Title = title;
 }
 bool ClientHandlerImpl::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
                                      const CefString& message,
@@ -94,6 +100,78 @@ void ClientHandlerImpl::OnCursorChange(CefRefPtr<CefBrowser> browser,
     if (view_handler_.get())
         view_handler_->OnCursorChange(browser, cursor);
 }
+
+/// Interfaces for outter wrapper
+void ClientHandlerImpl::GoBack()
+{
+    if (m_Browser.get() && CanGoBack()) {
+        m_Browser->GoBack();
+        m_HistLinksPos--;
+    }
+}
+void ClientHandlerImpl::GoForward()
+{
+    if (m_Browser.get() && CanGoForward()) {
+        m_Browser->GoForward();
+        m_HistLinksPos++;
+    }
+}
+void ClientHandlerImpl::GoToHistoryOffset(int offset)
+{
+    if (m_Browser.get() && m_HistLinksPos + offset >= 0 &&
+            m_HistLinksPos + offset < m_HistLinks.size()) {
+        m_HistLinksPos += offset;
+        m_Browser->GetMainFrame()->LoadURL(m_HistLinks[m_HistLinksPos]);
+    }
+}
+void ClientHandlerImpl::Stop()
+{
+    if (m_Browser.get())
+        m_Browser->StopLoad();
+}
+void ClientHandlerImpl::Reload(bool ignore_cache)
+{
+    if (m_Browser.get()) {
+        if (ignore_cache)
+            m_Browser->ReloadIgnoreCache();
+        else
+            m_Browser->Reload();
+    }
+}
+void ClientHandlerImpl::Resize(int width, int height)
+{
+    //TODO
+}
+void ClientHandlerImpl::PauseRendering()
+{
+    //TODO
+}
+void ClientHandlerImpl::ResumeRendering()
+{
+    //TODO
+}
+void ClientHandlerImpl::Focus()
+{
+    if (m_Browser.get())
+        m_Browser->GetHost()->SendFocusEvent(true);
+}
+void ClientHandlerImpl::Unfocus()
+{
+    if (m_Browser.get())
+        m_Browser->GetHost()->SendFocusEvent(false);
+}
+double ClientHandlerImpl::GetZoomLevel()
+{
+    if (m_Browser.get())
+        return m_Browser->GetHost()->GetZoomLevel();
+    return 0;
+}
+void ClientHandlerImpl::SetZoomLevel(double zoom_level)
+{
+    if (m_Browser.get())
+        m_Browser->GetHost()->SetZoomLevel(zoom_level);
+}
+///
 
 bool ClientHandlerImpl::OnProcessMessageReceived(
     CefRefPtr<CefBrowser> browser,
@@ -338,17 +416,27 @@ void ClientHandlerImpl::OnBeforeClose(CefRefPtr<CefBrowser> browser)
     }
 }
 
+// CefLoadHandler
 void ClientHandlerImpl::OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
                                              bool isLoading,
                                              bool canGoBack,
                                              bool canGoForward)
 {
-    REQUIRE_UI_THREAD();
-
     SetLoading(isLoading);
     SetNavState(canGoBack, canGoForward);
 }
-
+void ClientHandlerImpl::OnLoadStart(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame)
+{
+    if (load_handler_.get())
+        load_handler_->OnLoadStart(browser, frame);
+    if (frame->IsMain() && frame->GetURL() != m_HistLinks[m_HistLinksPos]) {
+        // Update history links on main frame when opening new link
+        m_HistLinks.resize(m_HistLinksPos + 1);
+        m_HistLinks.push_back(frame->GetURL());
+        m_HistLinksPos++;
+    }
+}
 void ClientHandlerImpl::OnLoadError(CefRefPtr<CefBrowser> browser,
                                     CefRefPtr<CefFrame> frame,
                                     ErrorCode errorCode,
@@ -361,21 +449,16 @@ void ClientHandlerImpl::OnLoadError(CefRefPtr<CefBrowser> browser,
     if (errorCode == ERR_ABORTED)
         return;
 
-    // Don't display an error for external protocols that we allow the OS to
-    // handle. See OnProtocolExecution().
-    if (errorCode == ERR_UNKNOWN_URL_SCHEME) {
-        std::string urlStr = frame->GetURL();
-        if (urlStr.find("spotify:") == 0)
-            return;
-    }
-
-    // Display a load error message.
-    std::stringstream ss;
-    ss << "<html><body bgcolor=\"white\">"
-        "<h2>Failed to load URL " << std::string(failedUrl) <<
-            " with error " << std::string(errorText) << " (" << errorCode <<
-                ").</h2></body></html>";
-    frame->LoadString(ss.str(), failedUrl);
+    if (load_handler_.get())
+        load_handler_->OnLoadError(browser, frame, errorCode, errorText,
+                failedUrl);
+}
+void ClientHandlerImpl::OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                                  CefRefPtr<CefFrame> frame,
+                                  int httpStatusCode)
+{
+    if (load_handler_.get())
+        load_handler_->OnLoadEnd(browser, frame, httpStatusCode);
 }
 
 bool ClientHandlerImpl::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
@@ -429,6 +512,8 @@ void ClientHandlerImpl::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
     /// CEF3-Awesomium
     if (process_handler_.get())
         process_handler_->OnRenderProcessTerminated(browser, status);
+
+    m_bIsCrashed = true;
 
     // Load the startup URL if that's not the website that we terminated on.
     CefRefPtr<CefFrame> frame = browser->GetMainFrame();

@@ -119,7 +119,7 @@ public:
 
 class ClientLoadHandler : public virtual CefBase {
 public:
-    /// CefLoadHandler [CefApp][CefRenderProcessHandler]
+    /// CefLoadHandler
     virtual void OnLoadStart(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame) = 0;
     virtual void OnLoadError(CefRefPtr<CefBrowser> browser,
