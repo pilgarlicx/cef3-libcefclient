@@ -2,13 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 get_filename_component(DEPENDS_DIR depends ABSOLUTE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${DEPENDS_DIR}/cmake/Modules)
 include(${DEPENDS_DIR}/cmake/import_custom_library.cmake)
-include(${DEPENDS_DIR}/cmake/configure_msvc_runtime.cmake)
 
 project(cef3-libcefclient)
-
-# Configure MSVC runtime library ('/MD' or '/MT'), '/MT' required here
-set(MSVC_RUNTIME "static")
-configure_msvc_runtime()
 
 #
 include_directories(
